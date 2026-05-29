@@ -1,0 +1,161 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "Sistem Pengaduan Masyarakat",
+  "dateExported": "2026-05-21T02:00:00.000Z",
+  "version": "1.1",
+  "folders": [
+    {
+      "_id": "folder_auth",
+      "name": "Authentication",
+      "containerId": ""
+    },
+    {
+      "_id": "folder_complaints",
+      "name": "Complaints",
+      "containerId": ""
+    },
+    {
+      "_id": "folder_responses",
+      "name": "Responses",
+      "containerId": ""
+    }
+  ],
+  "requests": [
+    {
+      "_id": "req_login_superadmin",
+      "colId": "col_sistem_pengaduan",
+      "containerId": "folder_auth",
+      "name": "Login - Super Admin",
+      "url": "http://localhost:5000/auth/login",
+      "method": "POST",
+      "sortNum": 10000,
+      "headers": [],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"superadmin@pengaduan.go.id\",\n  \"password\": \"password123\"\n}"
+      }
+    },
+    {
+      "_id": "req_login_admin",
+      "colId": "col_sistem_pengaduan",
+      "containerId": "folder_auth",
+      "name": "Login - Admin Biasa",
+      "url": "http://localhost:5000/auth/login",
+      "method": "POST",
+      "sortNum": 20000,
+      "headers": [],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"admin@pengaduan.go.id\",\n  \"password\": \"password123\"\n}"
+      }
+    },
+    {
+      "_id": "req_login_user",
+      "colId": "col_sistem_pengaduan",
+      "containerId": "folder_auth",
+      "name": "Login - Masyarakat (Ahmad)",
+      "url": "http://localhost:5000/auth/login",
+      "method": "POST",
+      "sortNum": 30000,
+      "headers": [],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"ahmad@example.com\",\n  \"password\": \"password123\"\n}"
+      }
+    },
+    {
+      "_id": "req_get_complaints",
+      "colId": "col_sistem_pengaduan",
+      "containerId": "folder_complaints",
+      "name": "Get All / Own Complaints",
+      "url": "http://localhost:5000/complaints",
+      "method": "GET",
+      "sortNum": 40000,
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{temp_token_here}}"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": ""
+      }
+    },
+    {
+      "_id": "req_create_complaint",
+      "colId": "col_sistem_pengaduan",
+      "containerId": "folder_complaints",
+      "name": "Create Complaint (User only)",
+      "url": "http://localhost:5000/complaints",
+      "method": "POST",
+      "sortNum": 50000,
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{temp_token_here}}"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "formg",
+        "form": [
+          {
+            "name": "title",
+            "value": "Laporan Tiang Listrik Hampir Roboh",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "value": "Di pertigaan gang makmur tiang listrik miring membahayakan warga.",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "req_add_response",
+      "colId": "col_sistem_pengaduan",
+      "containerId": "folder_responses",
+      "name": "Add Response (Admin/Superadmin)",
+      "url": "http://localhost:5000/responses",
+      "method": "POST",
+      "sortNum": 60000,
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{temp_token_here}}"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"complaint_id\": 1,\n  \"message\": \"Terima kasih atas laporannya. Tim PLN setempat sedang meluncur ke lokasi untuk perbaikan.\"\n}"
+      }
+    },
+    {
+      "_id": "req_delete_complaint",
+      "colId": "col_sistem_pengaduan",
+      "containerId": "folder_complaints",
+      "name": "Delete Complaint (Superadmin only)",
+      "url": "http://localhost:5000/complaints/1",
+      "method": "DELETE",
+      "sortNum": 70000,
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{temp_token_here}}"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": ""
+      }
+    }
+  ]
+}
