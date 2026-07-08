@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { PlusCircle, Calendar, MessageSquare, AlertCircle, Clock, CheckCircle2, FileQuestion, X, Image as ImageIcon } from 'lucide-react';
 import MapComponent from '../components/MapComponent';
+import { API_URL } from '../config';
 
 const DashboardUser = () => {
   const [complaints, setComplaints] = useState([]);
@@ -129,7 +130,7 @@ const DashboardUser = () => {
               
               {complaint.image && (
                 <img 
-                  src={`http://localhost:5000/uploads/${complaint.image}`} 
+                  src={`${API_URL}/uploads/${complaint.image}`} 
                   alt={complaint.title} 
                   className="complaint-image-preview" 
                 />
@@ -177,7 +178,7 @@ const DashboardUser = () => {
                     <ImageIcon size={16} /> Lampiran Foto:
                   </h4>
                   <img 
-                    src={`http://localhost:5000/uploads/${selectedComplaint.image}`} 
+                    src={`${API_URL}/uploads/${selectedComplaint.image}`} 
                     alt={selectedComplaint.title} 
                     className="detail-image" 
                   />

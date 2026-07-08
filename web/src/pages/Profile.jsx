@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { ArrowLeft, Camera, User, Mail, Save, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { API_URL } from '../config';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -13,7 +14,7 @@ const Profile = () => {
   const [email, setEmail] = useState(user?.email || '');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(
-    user?.avatar ? `http://localhost:5000/uploads/${user.avatar}` : null
+    user?.avatar ? `${API_URL}/uploads/${user.avatar}` : null
   );
 
   const [loading, setLoading] = useState(false);
@@ -211,7 +212,7 @@ const Profile = () => {
                 setName(user?.name || '');
                 setEmail(user?.email || '');
                 setAvatarFile(null);
-                setAvatarPreview(user?.avatar ? `http://localhost:5000/uploads/${user.avatar}` : null);
+                setAvatarPreview(user?.avatar ? `${API_URL}/uploads/${user.avatar}` : null);
                 setError('');
                 setSuccess('');
               }}

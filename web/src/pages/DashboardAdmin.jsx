@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, Trash2, MessageSquare, AlertCircle, Clock, CheckCircle2, FileQuestion, X, Image as ImageIcon, Send, User } from 'lucide-react';
+import { Calendar, Trash2, MessageSquare, AlertCircle, Clock, CheckCircle2, FileQuestion, X, Image as ImageIcon, Send, User, Users, UserCheck, UserX, ShieldAlert } from 'lucide-react';
 import MapComponent from '../components/MapComponent';
+import { API_URL } from '../config';
 
 const DashboardAdmin = () => {
   const { user } = useAuth();
@@ -16,9 +17,76 @@ const DashboardAdmin = () => {
   const [responseMsg, setResponseMsg] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
 
+  // Superadmin User Management State
+  const [activeTab, setActiveTab] = useState('complaints'); // 'complaints' or 'users'
+  const [usersList, setUsersList] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState('');
+
   useEffect(() => {
     fetchComplaints();
+    if (user && user.role === 'superadmin') {
+      fetchUsers();
+    }
   }, []);
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    setUsersError('');
+    try {
+      const response = await axios.get('/auth/users');
+      setUsersList(response.data);
+    } catch (err) {
+      console.error(err);
+      setUsersError('Gagal mengambil data daftar pengguna.');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'users') {
+      fetchUsers();
+    } else {
+      fetchComplaints();
+    }
+  };
+
+  const handleToggleUserRole = async (targetId, currentRole) => {
+    const newRole = currentRole === 'user' ? 'admin' : 'user';
+    const actionLabel = newRole === 'admin' 
+      ? 'menjadikan pengguna ini sebagai Petugas (Admin)' 
+      : 'kembalikan pengguna ini menjadi Masyarakat biasa';
+    
+    if (!window.confirm(`Apakah Anda yakin ingin ${actionLabel}?`)) return;
+
+    try {
+      await axios.put(`/auth/users/${targetId}/role`, { role: newRole });
+      setUsersList(
+        usersList.map((u) => (u.id === targetId ? { ...u, role: newRole } : u))
+      );
+      alert('Peran pengguna berhasil diperbarui.');
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Gagal mengubah peran pengguna.');
+    }
+  };
+
+  const handleDeleteUser = async (targetId) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus akun pengguna ini secara permanen? Semua data laporan pengaduan dari pengguna ini juga akan ikut terhapus.')) return;
+
+    try {
+      await axios.delete(`/auth/users/${targetId}`);
+      setUsersList(usersList.filter((u) => u.id !== targetId));
+      alert('Akun pengguna berhasil dihapus.');
+      // Refresh complaints since some might belong to the deleted user
+      fetchComplaints();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Gagal menghapus akun pengguna.');
+    }
+  };
 
   const fetchComplaints = async () => {
     setLoading(true);
@@ -139,90 +207,251 @@ const DashboardAdmin = () => {
 
   return (
     <div className="main-content">
-      <div className="dashboard-header">
+      <div className="dashboard-header" style={{ marginBottom: user.role === 'superadmin' ? '1rem' : '2.5rem' }}>
         <div>
           <h1 className="dashboard-title">Panel Admin Pengaduan</h1>
           <p className="dashboard-subtitle">Kelola dan tanggapi seluruh laporan dari masyarakat</p>
         </div>
       </div>
 
+      {/* Super Admin Navigation Tabs */}
+      {user && user.role === 'superadmin' && (
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '2rem', gap: '1.5rem' }}>
+          <button 
+            onClick={() => handleTabChange('complaints')}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '0.75rem 0.5rem',
+              fontWeight: '600',
+              fontSize: '1rem',
+              color: activeTab === 'complaints' ? 'var(--primary)' : 'var(--text-secondary)',
+              borderBottom: activeTab === 'complaints' ? '2px solid var(--primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <MessageSquare size={18} />
+            Laporan Pengaduan
+          </button>
+          <button 
+            onClick={() => handleTabChange('users')}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '0.75rem 0.5rem',
+              fontWeight: '600',
+              fontSize: '1rem',
+              color: activeTab === 'users' ? 'var(--primary)' : 'var(--text-secondary)',
+              borderBottom: activeTab === 'users' ? '2px solid var(--primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Users size={18} />
+            Manajemen Pengguna
+          </button>
+        </div>
+      )}
+
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-        {['all', 'pending', 'process', 'done'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`btn ${filterStatus === status ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', textTransform: 'capitalize' }}
-          >
-            {status === 'all' ? 'Semua' : status === 'process' ? 'Diproses' : status === 'done' ? 'Selesai' : 'Pending'}
-          </button>
-        ))}
-      </div>
+      {/* Render Complaints Tab */}
+      {activeTab === 'complaints' && (
+        <>
+          {/* Filter Tabs */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+            {['all', 'pending', 'process', 'done'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`btn ${filterStatus === status ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', textTransform: 'capitalize' }}
+              >
+                {status === 'all' ? 'Semua' : status === 'process' ? 'Diproses' : status === 'done' ? 'Selesai' : 'Pending'}
+              </button>
+            ))}
+          </div>
 
-      {loading ? (
-        <div className="loading-spinner"></div>
-      ) : filteredComplaints.length === 0 ? (
-        <div className="empty-state">
-          <FileQuestion size={48} className="empty-state-icon" />
-          <h3 className="empty-state-title">Tidak Ada Laporan</h3>
-          <p className="empty-state-desc">
-            {filterStatus === 'all' 
-              ? 'Belum ada masyarakat yang mengirimkan pengaduan.' 
-              : `Tidak ada pengaduan dengan status ${filterStatus}.`}
-          </p>
-        </div>
-      ) : (
-        <div className="complaints-grid">
-          {filteredComplaints.map((complaint) => (
-            <div key={complaint.id} className="card complaint-card" onClick={() => handleOpenDetail(complaint.id)} style={{ cursor: 'pointer' }}>
-              <div className="complaint-header">
-                <span className="complaint-date">{formatDate(complaint.created_at)}</span>
-                {getStatusBadge(complaint.status)}
-              </div>
-              <h3 className="complaint-title">{complaint.title}</h3>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: '500' }}>
-                <User size={14} />
-                <span>Oleh: {complaint.user_name} ({complaint.user_email})</span>
-              </div>
-
-              <p className="complaint-desc">{complaint.description}</p>
-              
-              {complaint.image && (
-                <img 
-                  src={`http://localhost:5000/uploads/${complaint.image}`} 
-                  alt={complaint.title} 
-                  className="complaint-image-preview" 
-                />
-              )}
-
-              <div className="complaint-footer">
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  <MessageSquare size={14} />
-                  {complaint.response_message ? 'Sudah ditanggapi' : 'Butuh tanggapan'}
-                </span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {user && user.role === 'superadmin' && (
-                    <button 
-                      onClick={(e) => handleDelete(complaint.id, e)} 
-                      className="btn btn-danger" 
-                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
-                      title="Hapus"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                  <span className="auth-link" style={{ fontSize: '0.85rem', fontWeight: '600', alignSelf: 'center' }}>
-                    Tanggapi &rarr;
-                  </span>
-                </div>
-              </div>
+          {loading ? (
+            <div className="loading-spinner"></div>
+          ) : filteredComplaints.length === 0 ? (
+            <div className="empty-state">
+              <FileQuestion size={48} className="empty-state-icon" />
+              <h3 className="empty-state-title">Tidak Ada Laporan</h3>
+              <p className="empty-state-desc">
+                {filterStatus === 'all' 
+                  ? 'Belum ada masyarakat yang mengirimkan pengaduan.' 
+                  : `Tidak ada pengaduan dengan status ${filterStatus}.`}
+              </p>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="complaints-grid">
+              {filteredComplaints.map((complaint) => (
+                <div key={complaint.id} className="card complaint-card" onClick={() => handleOpenDetail(complaint.id)} style={{ cursor: 'pointer' }}>
+                  <div className="complaint-header">
+                    <span className="complaint-date">{formatDate(complaint.created_at)}</span>
+                    {getStatusBadge(complaint.status)}
+                  </div>
+                  <h3 className="complaint-title">{complaint.title}</h3>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: '500' }}>
+                    <User size={14} />
+                    <span>Oleh: {complaint.user_name} ({complaint.user_email})</span>
+                  </div>
+
+                  <p className="complaint-desc">{complaint.description}</p>
+                  
+                  {complaint.image && (
+                    <img 
+                      src={`${API_URL}/uploads/${complaint.image}`} 
+                      alt={complaint.title} 
+                      className="complaint-image-preview" 
+                    />
+                  )}
+
+                  <div className="complaint-footer">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      <MessageSquare size={14} />
+                      {complaint.response_message ? 'Sudah ditanggapi' : 'Butuh tanggapan'}
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {user && user.role === 'superadmin' && (
+                        <button 
+                          onClick={(e) => handleDelete(complaint.id, e)} 
+                          className="btn btn-danger" 
+                          style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
+                          title="Hapus"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                      <span className="auth-link" style={{ fontSize: '0.85rem', fontWeight: '600', alignSelf: 'center' }}>
+                        Tanggapi &rarr;
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Render User Management Tab */}
+      {activeTab === 'users' && user && user.role === 'superadmin' && (
+        <>
+          {usersError && <div className="alert alert-danger">{usersError}</div>}
+          
+          {usersLoading ? (
+            <div className="loading-spinner"></div>
+          ) : usersList.length === 0 ? (
+            <div className="empty-state">
+              <Users size={48} className="empty-state-icon" />
+              <h3 className="empty-state-title">Tidak Ada Pengguna</h3>
+              <p className="empty-state-desc">Belum ada pengguna terdaftar lain di dalam database.</p>
+            </div>
+          ) : (
+            <div className="card" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Pengguna</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Email</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Peran</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: '600' }}>Terdaftar Pada</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: '600', textAlign: 'right' }}>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersList.map((usr) => (
+                    <tr key={usr.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.95rem' }}>
+                      <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        {usr.avatar ? (
+                          <img 
+                            src={`${API_URL}/uploads/${usr.avatar}`} 
+                            alt={usr.name} 
+                            style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: usr.role === 'admin' ? 'rgba(79, 70, 229, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+                            color: usr.role === 'admin' ? '#4f46e5' : '#2563eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '600',
+                            fontSize: '0.85rem'
+                          }}>
+                            {usr.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span style={{ fontWeight: '500' }}>{usr.name}</span>
+                      </td>
+                      <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{usr.email}</td>
+                      <td style={{ padding: '1rem' }}>
+                        {usr.role === 'admin' ? (
+                          <span className="badge badge-process" style={{ fontSize: '0.75rem', textTransform: 'none', letterSpacing: 'normal' }}><ShieldAlert size={12} /> Admin</span>
+                        ) : usr.role === 'superadmin' ? (
+                          <span className="badge badge-done" style={{ fontSize: '0.75rem', textTransform: 'none', letterSpacing: 'normal' }}><ShieldAlert size={12} /> Super Admin</span>
+                        ) : (
+                          <span className="badge badge-pending" style={{ fontSize: '0.75rem', backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', borderColor: 'rgba(37, 99, 235, 0.2)', textTransform: 'none', letterSpacing: 'normal' }}><User size={12} /> Masyarakat</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        {formatDate(usr.created_at)}
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => handleToggleUserRole(usr.id, usr.role)}
+                            className="btn btn-secondary"
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              fontSize: '0.8rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              borderColor: usr.role === 'user' ? 'rgba(79, 70, 229, 0.3)' : 'rgba(37, 99, 235, 0.3)',
+                              color: usr.role === 'user' ? '#4f46e5' : '#2563eb'
+                            }}
+                            title={usr.role === 'user' ? 'Jadikan Admin' : 'Kembalikan Jadi User'}
+                          >
+                            <UserCheck size={14} />
+                            {usr.role === 'user' ? 'Jadikan Admin' : 'Jadikan User'}
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteUser(usr.id)}
+                            className="btn btn-danger"
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              fontSize: '0.8rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                            title="Hapus Akun"
+                          >
+                            <UserX size={14} />
+                            Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
 
       {/* Detail Modal for Admin */}
@@ -269,7 +498,7 @@ const DashboardAdmin = () => {
                     <ImageIcon size={16} /> Foto Lampiran:
                   </h4>
                   <img 
-                    src={`http://localhost:5000/uploads/${selectedComplaint.image}`} 
+                    src={`${API_URL}/uploads/${selectedComplaint.image}`} 
                     alt={selectedComplaint.title} 
                     className="detail-image" 
                   />

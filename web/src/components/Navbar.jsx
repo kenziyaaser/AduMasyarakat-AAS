@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, FileText, PlusCircle, Shield, User } from 'lucide-react';
+import { API_URL } from '../config';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -60,7 +61,7 @@ const Navbar = () => {
             <Link to="/profile" className="navbar-profile-link" title="Lihat Profil">
               {user.avatar ? (
                 <img 
-                  src={`http://localhost:5000/uploads/${user.avatar}`} 
+                  src={`${API_URL}/uploads/${user.avatar}`} 
                   alt={user.name} 
                   className="navbar-avatar" 
                 />
